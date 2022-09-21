@@ -2,7 +2,11 @@ const express = require('express');
 const bodyparser = require('body-parser');
 const path = require('path');
 const app = express();
-
+const { BracketsManager } = require('brackets-manager');
+const { JsonDatabase } = require('brackets-json-db');
+const storage = new JsonDatabase();
+const manager = new BracketsManager(storage);
+storage.reset();
 const server = require('http').createServer(app);
 const todoData = {};
 const doneData = {};
@@ -13,49 +17,48 @@ require('dotenv').config({ path: ENV_FILE });
 
 // parse application/json
 app.use(express.json());
+app.use(function (req, res, next) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  next();
+})
 
-// Gets the meeting data based on status.
-app.get('/getMeetingData', function(req, res) {
-  if(req.query.status === "todo")
-  {
-    res.status(200).send({ data: todoData[req.query.meetingId] !== undefined ? todoData[req.query.meetingId]: undefined });;
-  }
-  if(req.query.status === "doing")
-  {
-    res.status(200).send({ data: doingData[req.query.meetingId] !== undefined ? doingData[req.query.meetingId]: undefined });;
-  }
-  if(req.query.status === "done")
-  {
-    res.status(200).send({ data: doneData[req.query.meetingId] !== undefined ? doneData[req.query.meetingId]: undefined });;
-  }
-});
 
-// Saves the meeting data based on status.
-app.post('/saveMeetingData', function(req, res) {
-  let meetingDetails = req.body;
+app.get('/tournmentData', async function(req, res) {
+    storage.reset();
+    await manager.create({
+        name: 'Example with BYEs',
+        tournamentId: 0,
+        type: 'single_elimination',
+        seeding: [
+            'Fadi', 'Team 2',
+            'Team 3', 'Team 4',
+        ],
+        settings: {
+            seedOrdering: ['natural'],
+            balanceByes: false, // Default value.
+            size: 4,
+        },
+      });
+    await manager.update.match({
+        id: 0,
+        opponent1: { score: 10 , result:"win"},
+        opponent2: { score: 0 },
+      });
 
-  if (meetingDetails.status === "todo") {
-    if (!todoData.hasOwnProperty(meetingDetails.meetingId)) {
-      todoData[meetingDetails.meetingId] = new Array();
-    }
-    todoData[meetingDetails.meetingId].push(meetingDetails);
-  }
+      await manager.update.match({
+        id: 1,
+        opponent1: { score: 20, result:"win" },
+        opponent2: { score: 15 },
+      });
 
-  if (meetingDetails.status === "doing") {
-    if (!doingData.hasOwnProperty(meetingDetails.meetingId)) {
-      doingData[meetingDetails.meetingId] = new Array();
-    }
-    doingData[meetingDetails.meetingId].push(meetingDetails);
-  }
-
-  if (meetingDetails.status === "done") {
-    if (!doneData.hasOwnProperty(meetingDetails.meetingId)) {
-      doneData[meetingDetails.meetingId] = new Array();
-    }
-    doneData[meetingDetails.meetingId].push(meetingDetails);
-  }
-
-  res.status(200).send();
+      
+      await manager.update.match({
+        id: 3,
+        opponent1: { score: 23, result:"win" },
+        opponent2: { score: 11 },
+      });
+    const b = await manager.get.tournamentData(0);
+    res.status(200).send(b);
 });
 
 server.listen(3000, function () {
