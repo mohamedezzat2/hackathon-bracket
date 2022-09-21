@@ -6,63 +6,39 @@
 import React, { useEffect } from "react";
 import * as microsoftTeams from "@microsoft/teams-js";
 import $ from "jquery";
+import { Bracket, RoundProps } from 'react-brackets';
+
 
 // Handles redirection after successful/failure sign in attempt.
-const Home = props => {
 
-    useEffect(() => {
-        microsoftTeams.app.initialize();
-    }, []);
-
-    // Method to check validate form and add the entered details.
-    const sendTaskDetails = (event) => {
-        var taskDescription = document.querySelector(".task-description")
-        var userName = document.querySelector(".user-name")
-        var isValid = true;
-        
-        $('.task-description,.user-name').each(function (e) {
-            if ($.trim($(this).val()) == '') {
-                isValid = false;
-                $(this).css({
-                    "border": "1px solid red"
-                });
-            }
-            else {
-                $(this).css({
-                    "border": "",
-                    "background": ""
-                });
-            }
-        });
-
-        if (isValid == false) {
-            event.preventDefault();
-            return false;
+const featchCurrentBracket = () => {
+  $.ajax({
+    url: "http://localhost:3000/tournmentData",
+    type: "GET",
+    success: function (bracket) {
+      console.log(bracket)
+        if(bracket) {
+          document.getElementById('brackets-viewer').innerHTML = "";
+          window.bracketsViewer.render({
+            stages: bracket.stage,
+            matches: bracket.match,
+            matchGames: bracket.match_game,
+            participants: bracket.participant,
+          });
         }
-
-        // Meeting participant's entered details.
-        const taskDetails = {
-            "taskDescription": taskDescription.value,
-            "userName": userName.value
-        };
-
-        microsoftTeams.dialog.submit(taskDetails);
-        return true;
-    }
-
-    return (
-        <form className="chat-form" onSubmit={(event) => {return sendTaskDetails(event)}}>
-            <div className="chat-label">
-                Assigned To:
-                <input type="text" className="user-name" />
-            </div>
-            <div className="chat-label">
-                Description:&nbsp;
-                <input type="text" className="task-description" />
-            </div>
-            <input type="submit" id="addDetails" value="Add" />
-        </form>
-    );
+    },
+    error: function (xhr, textStatus, errorThrown) {
+        console.log("textStatus: " + textStatus + ", errorThrown:" + errorThrown);
+    },
+  });
+}
+const Home = (props) => {
+  useEffect(() => {
+    featchCurrentBracket()
+    setInterval(() => featchCurrentBracket(), 10000);
+  })
+    
+  return (<div id="brackets-viewer" className="brackets-viewer"></div>)
 };
 
 export default Home;
