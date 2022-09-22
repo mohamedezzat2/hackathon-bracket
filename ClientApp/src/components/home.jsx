@@ -23,7 +23,7 @@ const featchCurrentBracket = (setPlayers) => {
         success: function (bracket) {
           console.log(bracket)
             if(bracket && bracket.stage && bracket.stage.length) {
-              document.getElementById('tournment-btn').disabled = true;
+              document.getElementById('tournment-btn').style.display = "none";
               document.getElementById('brackets-viewer').innerHTML = "";
               setPlayers(bracket.participant.length)
               window.bracketsViewer.render({
@@ -58,7 +58,7 @@ const startTournment = (setPlayers) => {
           console.log(bracket)
             if(bracket && bracket.stage && bracket.stage.length) {
               document.getElementById('brackets-viewer').innerHTML = "";
-              document.getElementById('tournment-btn').disabled = true;
+              document.getElementById('tournment-btn').style.display = "none";
               window.bracketsViewer.render({
                 stages: bracket.stage,
                 matches: bracket.match,

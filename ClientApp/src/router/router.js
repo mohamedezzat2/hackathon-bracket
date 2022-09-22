@@ -25,8 +25,10 @@ export const AppRoute = () => {
                     .then(context => {
                         const meetingId = context.meeting.id;
                         const username = context.user.userPrincipalName;
+                        let fullemail = username.split('@');
+                        const alias = fullemail[0];
                         $.ajax({
-                            url: "/addPlayer?id=" + meetingId + "&player="+username,
+                            url: "/addPlayer?id=" + meetingId + "&player="+alias,
                             type: "POST",
                             success: function (bracket) {
                                 console.log("added player to tournment!");

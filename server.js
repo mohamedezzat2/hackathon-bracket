@@ -34,7 +34,6 @@ const getIdFromMeetingId = (meeting_id) => {
 app.post("/addPlayer", async function(req, res) {
   const id = getIdFromMeetingId(req.query.id);
   const player = req.query.player; 
-  console.log(player)
   if (tournmentPlayers[id] == undefined) {
     tournmentPlayers[id] = [];
   }
@@ -43,8 +42,11 @@ app.post("/addPlayer", async function(req, res) {
     res.status(406).send("Tournment already started!");
     return;
   }
-  tournmentPlayers[id].push(player);
+  if(!tournmentPlayers[id].includes(player)) {
+    tournmentPlayers[id].push(player);
+  }
   
+  console.log(player)
   res.send(tournmentPlayers);
 });
 
