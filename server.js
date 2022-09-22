@@ -1,19 +1,17 @@
 const express = require('express');
-const bodyparser = require('body-parser');
 const path = require('path');
 const app = express();
 const { BracketsManager } = require('brackets-manager');
 const { JsonDatabase } = require('brackets-json-db');
-const { async } = require('q');
 const storage = new JsonDatabase();
 const manager = new BracketsManager(storage);
 storage.reset();
 const server = require('http').createServer(app);
-const todoData = {};
-const doneData = {};
-const doingData = {};
 
 const tournmentPlayers = {};
+// map between the tournment number and the meeting id
+const meetingTournmentNumberMap = {};
+let tournments_count = 0;
 
 const ENV_FILE = path.join(__dirname, '.env');
 require('dotenv').config({ path: ENV_FILE });
@@ -25,27 +23,57 @@ app.use(function (req, res, next) {
   next();
 })
 
-app.post("/addPlayer", async function(req, res) {
-  const id = req.body.id;
-  const players = req.body.players; 
-  if (tournmentPlayers[id] == undefined) {
-    tournmentPlayers[id] = []
+const isPowerOfTwo = number => (number & (number - 1)) === 0;
+
+const getIdFromMeetingId = (meeting_id) => {
+  if(meetingTournmentNumberMap[meeting_id]) {
+    return meetingTournmentNumberMap[meeting_id];
   }
-  tournmentPlayers[id].push(...players);
+  return meetingTournmentNumberMap[meeting_id] = ++tournments_count;
+}
+app.post("/addPlayer", async function(req, res) {
+  const id = getIdFromMeetingId(req.query.id);
+  const player = req.query.player; 
+  if (tournmentPlayers[id] == undefined) {
+    tournmentPlayers[id] = [];
+  }
+  const tournment = await manager.get.tournamentData(id);
+  if(tournment && tournment.stage && tournment.stage.length) {
+    res.status(406).send("Tournment already started!");
+    return;
+  }
+  tournmentPlayers[id].push(player);
+  
   res.send(tournmentPlayers);
 });
 
 
 app.post("/create", async function(req, res) {
-  const id = parseInt(req.body.id);
+  const id = getIdFromMeetingId(req.query.id);
+  console.log(id)
   const players = tournmentPlayers[id];
+  console.log(tournmentPlayers)
+  console.log(players)
+
   if (players === undefined){
     res.status(406).send("players not found");
-
     return 
   }
+
+  if(!isPowerOfTwo(players.length)) {
+    res.status(406).send("num of players must be power of two");
+    return 
+  }
+
+
+  const tournment = await manager.get.tournamentData(id);
+  if(tournment && tournment.stage && tournment.stage.length) {
+    res.status(200).send(tournment);
+    return;
+  }
+
   await manager.create({
-    name: 'Example with BYEs',
+    name: 'Tournment',
     tournamentId: id,
     type: 'single_elimination',
     seeding: players,
@@ -62,19 +90,16 @@ app.post("/create", async function(req, res) {
 })
 
 app.get('/tournmentData', async function(req, res) {
-    
-    const id = parseInt(req.query.id);
-    console.log(id);
+    const id = getIdFromMeetingId(req.query.id);
     const data = await manager.get.tournamentData(id);
     res.status(200).send(data);
 });
 
 
 app.post('/update', async function(req, res) {
-    
-  const id = parseInt(req.body.id);
-  const match_id = parseInt(req.body.match_id);
-  const winner_index = parseInt(req.body.winner_index);
+  const id = getIdFromMeetingId(req.query.id);
+  const match_id = parseInt(req.query.match_id);
+  const winner_index = parseInt(req.query.winner_index);
 
   if (winner_index === 1) {
     await manager.update.match({
